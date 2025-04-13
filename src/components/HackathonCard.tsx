@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { Calendar, Clock, MapPin, Globe, Wifi } from "lucide-react";
+import { Calendar, Clock, MapPin, Globe, Wifi, Building } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +12,7 @@ interface HackathonCardProps {
   duration: string;
   className?: string;
   locationType?: 'in-person' | 'remote' | 'hybrid';
+  onClick?: () => void;
 }
 
 export function HackathonCard({
@@ -22,12 +23,13 @@ export function HackathonCard({
   duration,
   locationType = 'hybrid',
   className,
+  onClick,
 }: HackathonCardProps) {
   
   const getLocationIcon = () => {
     switch (locationType) {
       case 'in-person':
-        return <MapPin className="mr-2 h-4 w-4 opacity-70" />;
+        return <Building className="mr-2 h-4 w-4 opacity-70" />;
       case 'remote':
         return <Wifi className="mr-2 h-4 w-4 opacity-70" />;
       case 'hybrid':
@@ -37,7 +39,10 @@ export function HackathonCard({
   };
   
   return (
-    <Card className={cn("overflow-hidden", className)}>
+    <Card 
+      className={cn("overflow-hidden", onClick && "cursor-pointer hover:shadow-md transition-shadow", className)} 
+      onClick={onClick}
+    >
       <div className="h-2 bg-gradient-primary" />
       <CardHeader>
         <CardTitle>{title}</CardTitle>
@@ -60,7 +65,12 @@ export function HackathonCard({
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full bg-gradient-primary">View Details</Button>
+        <Button className="w-full bg-gradient-primary" onClick={(e) => {
+          e.stopPropagation();
+          onClick && onClick();
+        }}>
+          View Details
+        </Button>
       </CardFooter>
     </Card>
   );

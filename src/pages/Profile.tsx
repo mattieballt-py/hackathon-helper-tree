@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatBuddy } from "@/components/ChatBuddy";
 import { Button } from "@/components/ui/button";
@@ -7,53 +8,137 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FileUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ProfileData {
+  full_name: string;
+  bio: string;
+  cv_url?: string;
+  avatar_url?: string;
+}
 
 const Profile = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // This would normally connect to Supabase, but we'll simulate for now
+  useEffect(() => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    // Set email from auth
+    setEmail(user.email || "");
+    
+    // Fetch profile data from Supabase
+    async function fetchProfile() {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return;
+      }
+      
+      if (data) {
+        setFullName(data.full_name || "");
+        setBio(data.bio || "");
+        setCvUrl(data.cv_url || null);
+      }
+    }
+    
+    fetchProfile();
+  }, [user, navigate]);
+
+  const uploadCV = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+    
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}-cv.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from("user_files")
+      .upload(fileName, file, {
+        upsert: true,
+      });
+    
+    if (error) {
+      console.error("Error uploading CV:", error);
+      return null;
+    }
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from("user_files")
+      .getPublicUrl(data.path);
+    
+    return publicUrl;
+  };
+
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to update your profile.",
+        variant: "destructive"
+      });
+      navigate("/auth");
+      return;
+    }
+    
     setIsUploading(true);
-
+    
     try {
-      // In a real app, this would be a call to Supabase
-      // For example:
-      // const { data, error } = await supabase
-      //   .from('profiles')
-      //   .upsert({
-      //     id: user.id,
-      //     full_name: fullName,
-      //     email: email,
-      //     bio: bio,
-      //     skills: skills
-      //   });
+      let newCvUrl = cvUrl;
       
-      // if (cvFile) {
-      //   const fileExt = cvFile.name.split('.').pop();
-      //   const fileName = `${userId}-cv.${fileExt}`;
-      //   const { error: uploadError } = await supabase.storage
-      //     .from('cvs')
-      //     .upload(fileName, cvFile);
-      // }
-
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Upload CV if a new file was selected
+      if (cvFile) {
+        newCvUrl = await uploadCV(cvFile);
+      }
+      
+      // Update profile in Supabase
+      const profileData: ProfileData = {
+        full_name: fullName,
+        bio: bio,
+      };
+      
+      if (newCvUrl) {
+        profileData.cv_url = newCvUrl;
+      }
+      
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          ...profileData
+        });
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Update Failed",
-        description: "There was an error updating your profile. Please try again.",
+        description: error.message || "There was an error updating your profile. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -101,8 +186,12 @@ const Profile = () => {
                       type="email" 
                       placeholder="Enter your email address" 
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      disabled
+                      className="bg-gray-50"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Email is associated with your account and cannot be changed here
+                    </p>
                   </div>
                   
                   <div>
@@ -138,7 +227,7 @@ const Profile = () => {
                     <div className="rounded-lg border-2 border-dashed border-gray-200 p-6 text-center">
                       <FileUp className="mx-auto h-10 w-10 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">
-                        {cvFile ? cvFile.name : "Drag and drop your CV/resume"}
+                        {cvFile ? cvFile.name : cvUrl ? "CV Already Uploaded" : "Drag and drop your CV/resume"}
                       </h3>
                       <p className="mt-1 text-xs text-gray-500">
                         Our AI will analyze your skills and provide tailored recommendations
@@ -152,10 +241,19 @@ const Profile = () => {
                           onChange={handleFileChange}
                         />
                         <Button variant="outline" onClick={() => document.getElementById('cv-upload')?.click()}>
-                          {cvFile ? "Change File" : "Select File"}
+                          {cvUrl ? "Replace CV" : "Select File"}
                         </Button>
                       </div>
                       <p className="mt-2 text-xs text-gray-500">PDF, DOC, or DOCX up to 10MB</p>
+                      
+                      {cvUrl && (
+                        <div className="mt-4 p-2 bg-gray-50 rounded flex justify-between items-center">
+                          <span className="text-sm truncate">{cvUrl.split('/').pop()}</span>
+                          <a href={cvUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="sm">View</Button>
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -9,7 +9,75 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      hackathons: {
+        Row: {
+          created_at: string
+          date: string
+          description: string | null
+          duration: string
+          id: string
+          location: string
+          location_type: string
+          title: string
+          user_id: string | null
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          description?: string | null
+          duration: string
+          id?: string
+          location: string
+          location_type: string
+          title: string
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration?: string
+          id?: string
+          location?: string
+          location_type?: string
+          title?: string
+          user_id?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          cv_url: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          cv_url?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          cv_url?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

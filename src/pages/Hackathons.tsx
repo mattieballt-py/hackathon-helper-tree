@@ -1,29 +1,40 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatBuddy } from "@/components/ChatBuddy";
 import { Button } from "@/components/ui/button";
 import { HackathonCard } from "@/components/HackathonCard";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { FileUp, Globe, MapPin, Plus, Wifi } from "lucide-react";
+import { FileUp, Globe, MapPin, Plus, Wifi, Building, PlusCircle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
 
 // Define types for our hackathon data and filters
 type HackathonLocation = 'in-person' | 'remote' | 'hybrid';
-type HackathonFilter = 'all' | HackathonLocation;
+type HackathonFilter = 'all' | 'global' | HackathonLocation;
 
 interface HackathonData {
   id: string;
+  user_id: string;
   title: string;
   description: string;
   date: string;
   location: string;
-  locationType: HackathonLocation;
+  location_type: HackathonLocation;
   duration: string;
+  website_url?: string;
 }
 
 const Hackathons = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
   const [showAddForm, setShowAddForm] = useState(false);
   const [filter, setFilter] = useState<HackathonFilter>('all');
   const [hackathonTitle, setHackathonTitle] = useState("");
@@ -32,69 +43,159 @@ const Hackathons = () => {
   const [hackathonLocationType, setHackathonLocationType] = useState<HackathonLocation>("hybrid");
   const [hackathonDate, setHackathonDate] = useState("");
   const [hackathonDuration, setHackathonDuration] = useState("");
+  const [hackathonUrl, setHackathonUrl] = useState("");
+  const [hackathons, setHackathons] = useState<HackathonData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Sample hackathon data - in a real app, this would come from Supabase
-  const [hackathons, setHackathons] = useState<HackathonData[]>([
-    {
-      id: "1",
-      title: "TechCrunch Disrupt",
-      description: "Build the next unicorn startup",
-      date: "Apr 25-27, 2025",
-      location: "Virtual Event",
-      locationType: "remote",
-      duration: "48 hours"
-    },
-    {
-      id: "2",
-      title: "Climate Hack",
-      description: "Solving environmental challenges",
-      date: "May 10-12, 2025",
-      location: "Hybrid - SF & Virtual",
-      locationType: "hybrid",
-      duration: "36 hours"
-    },
-    {
-      id: "3",
-      title: "Healthcare Innovation",
-      description: "Creating solutions for healthcare",
-      date: "June 5-7, 2025",
-      location: "Boston",
-      locationType: "in-person",
-      duration: "54 hours"
+  // Check for hackathon ID in URL params to show details
+  const hackathonId = searchParams.get('id');
+
+  // Fetch hackathons from Supabase
+  useEffect(() => {
+    async function fetchHackathons() {
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('hackathons')
+          .select('*')
+          .eq('user_id', user.id);
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setHackathons(data);
+        }
+      } catch (error: any) {
+        console.error('Error fetching hackathons:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your hackathons. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
-  ]);
+    
+    fetchHackathons();
+    
+    // If there's a hackathon ID in the URL, show the add form
+    if (hackathonId) {
+      const hackathon = hackathons.find(h => h.id === hackathonId);
+      if (hackathon) {
+        setHackathonTitle(hackathon.title);
+        setHackathonDesc(hackathon.description);
+        setHackathonLocation(hackathon.location);
+        setHackathonLocationType(hackathon.location_type);
+        setHackathonDate(hackathon.date);
+        setHackathonDuration(hackathon.duration);
+        setHackathonUrl(hackathon.website_url || "");
+        setShowAddForm(true);
+      }
+    }
+  }, [user, navigate, hackathonId]);
 
   // Filter hackathons based on location type
-  const filteredHackathons = hackathons.filter(hackathon => 
-    filter === 'all' || hackathon.locationType === filter
-  );
+  const filteredHackathons = hackathons.filter(hackathon => {
+    if (filter === 'all') return true;
+    if (filter === 'global') return hackathon.location.toLowerCase().includes('global') || 
+                                  hackathon.location.toLowerCase().includes('worldwide') || 
+                                  hackathon.location.toLowerCase().includes('international');
+    return hackathon.location_type === filter;
+  });
 
   // Add a new hackathon
-  const handleAddHackathon = () => {
-    if (!hackathonTitle || !hackathonDesc || !hackathonLocation || !hackathonDate || !hackathonDuration) {
-      alert("Please fill out all fields");
+  const handleAddHackathon = async () => {
+    if (!user) {
+      navigate("/auth");
       return;
     }
     
-    const newHackathon: HackathonData = {
-      id: Date.now().toString(),
-      title: hackathonTitle,
-      description: hackathonDesc,
-      date: hackathonDate,
-      location: hackathonLocation,
-      locationType: hackathonLocationType,
-      duration: hackathonDuration
-    };
+    if (!hackathonTitle || !hackathonDesc || !hackathonLocation || !hackathonDate || !hackathonDuration) {
+      toast({
+        title: "Missing information",
+        description: "Please fill out all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    setHackathons([...hackathons, newHackathon]);
+    setIsLoading(true);
     
-    // Reset form
-    setHackathonTitle("");
-    setHackathonDesc("");
-    setHackathonLocation("");
-    setHackathonDate("");
-    setHackathonDuration("");
-    setShowAddForm(false);
+    try {
+      const hackathonData = {
+        user_id: user.id,
+        title: hackathonTitle,
+        description: hackathonDesc,
+        date: hackathonDate,
+        location: hackathonLocation,
+        location_type: hackathonLocationType,
+        duration: hackathonDuration,
+        website_url: hackathonUrl || null
+      };
+      
+      // If editing existing hackathon
+      if (hackathonId) {
+        const { error } = await supabase
+          .from('hackathons')
+          .update(hackathonData)
+          .eq('id', hackathonId)
+          .eq('user_id', user.id);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Hackathon updated successfully!"
+        });
+      } else {
+        // Creating new hackathon
+        const { data, error } = await supabase
+          .from('hackathons')
+          .insert(hackathonData)
+          .select();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setHackathons([...hackathons, data[0]]);
+        }
+        
+        toast({
+          title: "Success",
+          description: "Hackathon added successfully!"
+        });
+      }
+      
+      // Reset form
+      setHackathonTitle("");
+      setHackathonDesc("");
+      setHackathonLocation("");
+      setHackathonDate("");
+      setHackathonDuration("");
+      setHackathonUrl("");
+      setShowAddForm(false);
+      
+      // Remove ID from URL
+      navigate("/hackathons");
+    } catch (error: any) {
+      console.error('Error saving hackathon:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save hackathon. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -110,7 +211,20 @@ const Hackathons = () => {
             </div>
             <Button 
               className="bg-gradient-primary"
-              onClick={() => setShowAddForm(!showAddForm)}
+              onClick={() => {
+                setHackathonTitle("");
+                setHackathonDesc("");
+                setHackathonLocation("");
+                setHackathonLocationType("hybrid");
+                setHackathonDate("");
+                setHackathonDuration("");
+                setHackathonUrl("");
+                setShowAddForm(!showAddForm);
+                // Remove ID from URL if opening a blank form
+                if (!showAddForm) {
+                  navigate("/hackathons");
+                }
+              }}
             >
               <Plus size={18} className="mr-1" /> Add Hackathon
             </Button>
@@ -118,7 +232,9 @@ const Hackathons = () => {
           
           {showAddForm && (
             <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm mb-6 animate-fade-in">
-              <h2 className="text-lg font-semibold mb-4">Add Hackathon Details</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                {hackathonId ? "Edit Hackathon" : "Add Hackathon Details"}
+              </h2>
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">
@@ -199,6 +315,17 @@ const Hackathons = () => {
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Website URL (optional)
+                  </label>
+                  <Input 
+                    value={hackathonUrl}
+                    onChange={(e) => setHackathonUrl(e.target.value)}
+                    placeholder="e.g., https://hackathon-website.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">
                     Or upload event documentation
                   </label>
                   <div className="rounded-lg border border-gray-200 p-4 text-center">
@@ -209,11 +336,18 @@ const Hackathons = () => {
                 </div>
                 
                 <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                  <Button variant="outline" onClick={() => {
+                    setShowAddForm(false);
+                    navigate("/hackathons");
+                  }}>
                     Cancel
                   </Button>
-                  <Button className="bg-gradient-primary" onClick={handleAddHackathon}>
-                    Add Hackathon
+                  <Button 
+                    className="bg-gradient-primary" 
+                    onClick={handleAddHackathon}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Saving..." : hackathonId ? "Update Hackathon" : "Add Hackathon"}
                   </Button>
                 </div>
               </div>
@@ -234,11 +368,18 @@ const Hackathons = () => {
                     <Globe size={14} className="mr-1" /> All
                   </Button>
                   <Button 
+                    variant={filter === 'global' ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => setFilter('global')}
+                  >
+                    <Globe size={14} className="mr-1" /> Global
+                  </Button>
+                  <Button 
                     variant={filter === 'in-person' ? 'default' : 'outline'} 
                     size="sm"
                     onClick={() => setFilter('in-person')}
                   >
-                    <MapPin size={14} className="mr-1" /> In-person
+                    <Building size={14} className="mr-1" /> In-person
                   </Button>
                   <Button 
                     variant={filter === 'remote' ? 'default' : 'outline'} 
@@ -252,12 +393,16 @@ const Hackathons = () => {
                     size="sm"
                     onClick={() => setFilter('hybrid')}
                   >
-                    <Globe size={14} className="mr-1" /> Hybrid
+                    <MapPin size={14} className="mr-1" /> Hybrid
                   </Button>
                 </div>
               </div>
 
-              {filteredHackathons.length > 0 ? (
+              {isLoading ? (
+                <div className="text-center py-10">
+                  <p className="text-gray-500">Loading hackathons...</p>
+                </div>
+              ) : filteredHackathons.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredHackathons.map(hackathon => (
                     <HackathonCard
@@ -267,12 +412,44 @@ const Hackathons = () => {
                       date={hackathon.date}
                       location={hackathon.location}
                       duration={hackathon.duration}
+                      locationType={hackathon.location_type}
+                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        navigate(`/hackathons?id=${hackathon.id}`);
+                      }}
                     />
                   ))}
+                  
+                  {/* Add hackathon card */}
+                  <div 
+                    className="border border-dashed border-gray-300 rounded-lg flex items-center justify-center flex-col p-6 h-full min-h-[200px] cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => {
+                      setHackathonTitle("");
+                      setHackathonDesc("");
+                      setHackathonLocation("");
+                      setHackathonLocationType("hybrid");
+                      setHackathonDate("");
+                      setHackathonDuration("");
+                      setShowAddForm(true);
+                      navigate("/hackathons");
+                    }}
+                  >
+                    <PlusCircle size={40} className="text-gray-400 mb-2" />
+                    <p className="text-gray-500 font-medium">Add New Hackathon</p>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-gray-200 rounded-lg">
-                  <p className="text-gray-500">No hackathons match your filter.</p>
+                  <p className="text-gray-500 mb-4">No hackathons match your filter or you haven't added any hackathons yet.</p>
+                  <Button 
+                    onClick={() => {
+                      setShowAddForm(true);
+                      navigate("/hackathons");
+                    }}
+                    className="bg-gradient-primary"
+                  >
+                    <Plus size={16} className="mr-2" /> Add Your First Hackathon
+                  </Button>
                 </div>
               )}
             </section>
