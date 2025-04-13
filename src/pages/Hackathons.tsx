@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
@@ -27,6 +26,7 @@ interface HackathonData {
   location_type: HackathonLocation;
   duration: string;
   website_url?: string;
+  created_at?: string;
 }
 
 const Hackathons = () => {
@@ -71,7 +71,12 @@ const Hackathons = () => {
         }
         
         if (data) {
-          setHackathons(data);
+          // Cast the data to ensure type compatibility
+          const typedData = data.map(item => ({
+            ...item,
+            location_type: item.location_type as HackathonLocation
+          }));
+          setHackathons(typedData);
         }
       } catch (error: any) {
         console.error('Error fetching hackathons:', error);
@@ -156,6 +161,16 @@ const Hackathons = () => {
           title: "Success",
           description: "Hackathon updated successfully!"
         });
+        
+        // Update the hackathon in the local state
+        setHackathons(prevHackathons => 
+          prevHackathons.map(h => 
+            h.id === hackathonId 
+              ? { ...h, ...hackathonData, location_type: hackathonLocationType } 
+              : h
+          )
+        );
+        
       } else {
         // Creating new hackathon
         const { data, error } = await supabase
@@ -166,7 +181,12 @@ const Hackathons = () => {
         if (error) throw error;
         
         if (data) {
-          setHackathons([...hackathons, data[0]]);
+          // Add the typed hackathon to the state
+          const newHackathon: HackathonData = {
+            ...data[0],
+            location_type: data[0].location_type as HackathonLocation
+          };
+          setHackathons([...hackathons, newHackathon]);
         }
         
         toast({
