@@ -1,18 +1,27 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Check, ChevronRight, Circle } from "lucide-react";
+import { Check, ChevronDown, Circle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface Node {
   id: string;
   title: string;
   description: string;
+  resources?: string[];
   children?: Node[];
 }
 
 export function SkillTree() {
   const [expanded, setExpanded] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
   const [completed, setCompleted] = useState<string[]>([]);
   
   const initialNodes: Node[] = [
@@ -25,16 +34,19 @@ export function SkillTree() {
           id: "team",
           title: "Join a Team",
           description: "Find your hackathon buddies",
+          resources: ["Team building guide", "Finding teammates worksheet", "Team communication templates"]
         },
         {
           id: "scope",
           title: "Define Scope",
           description: "What will you build?",
+          resources: ["Project scoping worksheet", "MVP definition guide", "Feature prioritization template"]
         },
         {
           id: "plan",
           title: "Create a Plan",
           description: "Outline your approach",
+          resources: ["Project timeline template", "Task distribution guide", "Hackathon planning checklist"]
         }
       ]
     },
@@ -51,12 +63,14 @@ export function SkillTree() {
             {
               id: "frontend-design",
               title: "Design UI",
-              description: "Create wireframes and mockups"
+              description: "Create wireframes and mockups",
+              resources: ["Figma basics", "UI design principles", "Color theory guide"]
             },
             {
               id: "frontend-code",
               title: "Code UI",
-              description: "Implement designs with HTML, CSS & JS"
+              description: "Implement designs with HTML, CSS & JS",
+              resources: ["React fundamentals", "CSS flexbox cheatsheet", "JavaScript for beginners"]
             }
           ]
         },
@@ -68,12 +82,14 @@ export function SkillTree() {
             {
               id: "backend-api",
               title: "Create API",
-              description: "Define data endpoints"
+              description: "Define data endpoints",
+              resources: ["REST API basics", "API design best practices", "Express.js tutorial"]
             },
             {
               id: "backend-db",
               title: "Setup Database",
-              description: "Design and implement data storage"
+              description: "Design and implement data storage",
+              resources: ["Database schemas explained", "SQL vs NoSQL guide", "Data modeling techniques"]
             }
           ]
         },
@@ -85,12 +101,14 @@ export function SkillTree() {
             {
               id: "product-req",
               title: "Requirements",
-              description: "Define what needs to be built"
+              description: "Define what needs to be built",
+              resources: ["User story templates", "Requirements gathering", "Prioritization techniques"]
             },
             {
               id: "product-present",
               title: "Presentation",
-              description: "Prepare the pitch"
+              description: "Prepare the pitch",
+              resources: ["Pitch deck templates", "Demo day preparation", "Storytelling techniques"]
             }
           ]
         }
@@ -106,6 +124,14 @@ export function SkillTree() {
     );
   };
   
+  const selectNode = (id: string) => {
+    setSelected(prev => 
+      prev.includes(id) 
+        ? prev.filter(nodeId => nodeId !== id)
+        : [...prev, id]
+    );
+  };
+
   const toggleComplete = (id: string) => {
     setCompleted(prev => 
       prev.includes(id) 
@@ -117,32 +143,58 @@ export function SkillTree() {
   const renderNode = (node: Node, level: number = 0, isLast: boolean = true) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expanded.includes(node.id);
+    const isSelected = selected.includes(node.id);
     const isCompleted = completed.includes(node.id);
     
     return (
-      <div key={node.id} className="relative">
-        <div 
-          className={cn(
-            "flex items-start py-2",
-            level > 0 && "tree-branch",
-            level > 0 && isLast ? "tree-branch-last" : "tree-branch-mid"
-          )}
-        >
-          <Button
-            variant="outline"
-            size="icon"
-            className={cn(
-              "h-6 w-6 rounded-full mr-2 border-2",
-              isCompleted ? "bg-gradient-primary border-transparent" : "bg-white"
-            )}
-            onClick={() => toggleComplete(node.id)}
-          >
-            {isCompleted ? <Check size={12} /> : <Circle size={12} />}
-          </Button>
-          
-          <div className="flex-1">
+      <div key={node.id} className={cn(
+        "relative flex flex-col items-center",
+        level > 0 && "tree-branch"
+      )}>
+        <div className="flex items-center justify-center mb-1">
+          <RadioGroup className="flex flex-row items-center gap-1">
             <div className="flex items-center">
-              <h3 className="font-medium text-gray-900">{node.title}</h3>
+              <RadioGroupItem 
+                value={node.id} 
+                id={node.id}
+                checked={isSelected}
+                onClick={() => selectNode(node.id)} 
+                className={cn(
+                  "h-4 w-4",
+                  isSelected ? "bg-gradient-primary border-transparent" : "bg-white"
+                )}
+              />
+            </div>
+          </RadioGroup>
+          
+          <div className="mx-2">
+            <div className="flex items-center">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <h3 className={cn(
+                      "font-medium text-gray-900", 
+                      isCompleted && "line-through opacity-70"
+                    )}>
+                      {node.title}
+                    </h3>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{node.description}</p>
+                    {node.resources && (
+                      <div className="mt-2">
+                        <p className="font-medium">Resources:</p>
+                        <ul className="list-disc list-inside text-sm">
+                          {node.resources.map((resource, i) => (
+                            <li key={i}>{resource}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
               {hasChildren && (
                 <Button
                   variant="ghost"
@@ -150,25 +202,38 @@ export function SkillTree() {
                   className="h-6 w-6 ml-1"
                   onClick={() => toggleNode(node.id)}
                 >
-                  <ChevronRight 
+                  <ChevronDown
                     size={16} 
                     className={cn(
                       "transition-transform", 
-                      isExpanded && "rotate-90"
+                      isExpanded ? "rotate-180" : ""
                     )} 
                   />
                 </Button>
               )}
+              
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  "h-5 w-5 rounded-full ml-1 border-2",
+                  isCompleted ? "bg-gradient-primary border-transparent" : "bg-white"
+                )}
+                onClick={() => toggleComplete(node.id)}
+              >
+                {isCompleted ? <Check size={10} /> : <Circle size={10} />}
+              </Button>
             </div>
-            <p className="text-sm text-gray-500">{node.description}</p>
           </div>
         </div>
         
         {hasChildren && isExpanded && (
-          <div className="ml-6 pl-2">
-            {node.children?.map((child, i) => 
-              renderNode(child, level + 1, i === (node.children?.length || 0) - 1)
-            )}
+          <div className="flex flex-col items-center pt-2 border-l border-gray-200">
+            <div className="pl-8 space-y-3">
+              {node.children?.map((child, i) => 
+                renderNode(child, level + 1, i === (node.children?.length || 0) - 1)
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -178,10 +243,21 @@ export function SkillTree() {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
       <div className="flex justify-between items-center mb-4 pb-2 border-b">
-        <h2 className="text-xl font-semibold gradient-text">Your Hackathon Journey</h2>
+        <div>
+          <h2 className="text-xl font-semibold gradient-text">Your Hackathon Journey</h2>
+          <p className="text-sm text-gray-500">Select the skills you'd like to develop to see what you can achieve</p>
+        </div>
       </div>
-      <div className="space-y-1">
-        {initialNodes.map((node, i) => renderNode(node, 0, i === initialNodes.length - 1))}
+
+      <div className="flex flex-col items-center pt-4">
+        <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center mb-2">
+          <span className="text-white text-2xl font-bold">JD</span>
+        </div>
+        <h3 className="text-lg font-medium mb-4">John Doe</h3>
+        
+        <div className="space-y-2 flex flex-col items-center">
+          {initialNodes.map((node, i) => renderNode(node, 0, i === initialNodes.length - 1))}
+        </div>
       </div>
     </div>
   );

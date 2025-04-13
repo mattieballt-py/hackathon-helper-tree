@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { Calendar, Clock, MapPin, Globe, Wifi } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +11,7 @@ interface HackathonCardProps {
   location: string;
   duration: string;
   className?: string;
+  locationType?: 'in-person' | 'remote' | 'hybrid';
 }
 
 export function HackathonCard({
@@ -19,8 +20,22 @@ export function HackathonCard({
   date,
   location,
   duration,
+  locationType = 'hybrid',
   className,
 }: HackathonCardProps) {
+  
+  const getLocationIcon = () => {
+    switch (locationType) {
+      case 'in-person':
+        return <MapPin className="mr-2 h-4 w-4 opacity-70" />;
+      case 'remote':
+        return <Wifi className="mr-2 h-4 w-4 opacity-70" />;
+      case 'hybrid':
+      default:
+        return <Globe className="mr-2 h-4 w-4 opacity-70" />;
+    }
+  };
+  
   return (
     <Card className={cn("overflow-hidden", className)}>
       <div className="h-2 bg-gradient-primary" />
@@ -39,7 +54,7 @@ export function HackathonCard({
             <span>{duration}</span>
           </div>
           <div className="flex items-center">
-            <MapPin className="mr-2 h-4 w-4 opacity-70" /> 
+            {getLocationIcon()}
             <span>{location}</span>
           </div>
         </div>
