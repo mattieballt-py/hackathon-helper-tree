@@ -20,9 +20,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if there's a #access_token in the URL (from email confirmation)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    
+    if (accessToken) {
+      console.log('Access token found in URL, setting session');
+      // This means the user came from an email confirmation link
+      // We'll set up the auth listener and Supabase will handle the token
+    }
+
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        console.log('Auth state changed:', _event, session ? 'session exists' : 'no session');
         setSession(session);
         setUser(session?.user ?? null);
       }
@@ -30,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Got session:', session ? 'session exists' : 'no session');
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -57,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         options: {
-          // In production, you may want to customize this
+          // Instead of redirecting to localhost, use the current domain
           emailRedirectTo: window.location.origin + '/auth',
         },
       });
