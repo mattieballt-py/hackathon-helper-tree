@@ -17,3 +17,6 @@ enabled = true
 
 [auth]
 enabled = true
+
+[functions.analyze-cv]
+verify_jwt = true

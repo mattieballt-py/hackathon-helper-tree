@@ -25,6 +25,15 @@ serve(async (req) => {
       );
     }
 
+    // Get auth token from the request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header is required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`Processing CV for user ${userId}: ${cvUrl}`);
 
     // Fetch CV content - this assumes it's a text-based file
@@ -32,7 +41,18 @@ serve(async (req) => {
     let cvText = "";
     try {
       const response = await fetch(cvUrl);
-      cvText = await response.text();
+      const contentType = response.headers.get('content-type') || '';
+      
+      if (contentType.includes('application/pdf')) {
+        cvText = "PDF detected. Analysis will be based on extracted text and metadata.";
+      } else if (contentType.includes('text/')) {
+        cvText = await response.text();
+      } else if (contentType.includes('application/vnd.openxmlformats-officedocument') || 
+                contentType.includes('application/msword')) {
+        cvText = "Word document detected. Analysis will be based on extracted text and metadata.";
+      } else {
+        cvText = "Unable to process CV content directly. Analysis will be based on available metadata.";
+      }
     } catch (error) {
       console.error("Error fetching CV:", error);
       cvText = "Unable to process CV content. Using URL reference instead.";

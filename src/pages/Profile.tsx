@@ -39,6 +39,7 @@ const Profile = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<SkillAnalysis | null>(null);
+  const [profileExists, setProfileExists] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -58,11 +59,19 @@ const Profile = () => {
         .single();
       
       if (error) {
+        if (error.code === 'PGRST116') {
+          // Profile not found - this is not an error for new users
+          console.log("Profile not found. Will create new profile on save.");
+          setProfileExists(false);
+          return;
+        }
+        
         console.error("Error fetching profile:", error);
         return;
       }
       
       if (data) {
+        setProfileExists(true);
         setFullName(data.full_name || "");
         setBio(data.bio || "");
         setCvUrl(data.cv_url || null);
@@ -107,26 +116,43 @@ const Profile = () => {
     }
   };
 
+  const createBucketIfNotExists = async () => {
+    try {
+      // Try to get bucket info to check if it exists
+      const { data: bucketExists, error } = await supabase.storage.getBucket('user_files');
+      
+      // If bucket doesn't exist or there's an error, try to create it
+      if (error || !bucketExists) {
+        const { error: createError } = await supabase.storage.createBucket('user_files', {
+          public: false
+        });
+        
+        if (createError) {
+          console.error("Error creating bucket:", createError);
+          throw new Error("Failed to create storage bucket");
+        }
+        console.log("Bucket created successfully");
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error in bucket creation:", error);
+      return false;
+    }
+  };
+
   const uploadCV = async (file: File): Promise<string | null> => {
     if (!user) return null;
     
     // Create user_files bucket if it doesn't exist
-    try {
-      const { data: bucketExists } = await supabase.storage.getBucket('user_files');
-      if (!bucketExists) {
-        await supabase.storage.createBucket('user_files', {
-          public: false
-        });
-      }
-    } catch (error) {
-      // Bucket might not exist, create it
-      try {
-        await supabase.storage.createBucket('user_files', {
-          public: false
-        });
-      } catch (bucketError) {
-        console.error("Error creating bucket:", bucketError);
-      }
+    const bucketCreated = await createBucketIfNotExists();
+    if (!bucketCreated) {
+      toast({
+        title: "Storage Error",
+        description: "Could not initialize file storage. Please try again.",
+        variant: "destructive"
+      });
+      return null;
     }
     
     const fileExt = file.name.split(".").pop();
@@ -171,11 +197,10 @@ const Profile = () => {
       // Upload CV if a new file was selected
       if (cvFile) {
         newCvUrl = await uploadCV(cvFile);
-        if (newCvUrl) {
-          setCvUrl(newCvUrl);
-          // Analyze the CV
-          analyzeCv(newCvUrl, user.id);
+        if (!newCvUrl) {
+          throw new Error("Failed to upload CV");
         }
+        setCvUrl(newCvUrl);
       }
       
       // Update profile in Supabase
@@ -188,21 +213,30 @@ const Profile = () => {
         profileData.cv_url = newCvUrl;
       }
       
+      // Use upsert with explicit ID to ensure row-level security works correctly
       const { error } = await supabase
         .from("profiles")
         .upsert({
           id: user.id,
-          ...profileData
+          ...profileData,
+          updated_at: new Date().toISOString(),
         });
       
       if (error) {
-        throw error;
+        console.error("Profile update error:", error);
+        throw new Error(error.message);
       }
       
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
+      
+      // Analyze the CV if it was newly uploaded
+      if (cvFile && newCvUrl) {
+        analyzeCv(newCvUrl, user.id);
+      }
+      
     } catch (error: any) {
       toast({
         title: "Update Failed",
