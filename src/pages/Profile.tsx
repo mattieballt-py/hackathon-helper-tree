@@ -52,17 +52,16 @@ const Profile = () => {
     
     // Fetch profile data from Supabase
     async function fetchProfile() {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // Profile not found - create a new profile
+      try {
+        // First check if the profile exists
+        const { data: existingProfile, error: checkError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id);
+        
+        // If no profile exists or there's an error, create a new profile
+        if (checkError || !existingProfile || existingProfile.length === 0) {
           console.log("Profile not found. Creating new profile...");
-          setProfileExists(false);
           
           // Create a default profile for the user
           const { error: createError } = await supabase
@@ -81,28 +80,43 @@ const Profile = () => {
               description: "Could not create your profile. Please try again.",
               variant: "destructive"
             });
+            return;
           } else {
             console.log("Default profile created successfully");
             setProfileExists(true);
+            // Now fetch the newly created profile
+            const { data: newProfile, error: newProfileError } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", user.id)
+              .single();
+              
+            if (newProfileError || !newProfile) {
+              console.error("Error fetching new profile:", newProfileError);
+              return;
+            }
+            
+            if (newProfile) {
+              setFullName(newProfile.full_name || "");
+              setBio(newProfile.bio || "");
+              setCvUrl(newProfile.cv_url || null);
+            }
           }
+        } else {
+          // Profile exists, set the data
+          setProfileExists(true);
+          const profile = existingProfile[0];
+          setFullName(profile.full_name || "");
+          setBio(profile.bio || "");
+          setCvUrl(profile.cv_url || null);
           
-          return;
+          // If CV exists, analyze it
+          if (profile.cv_url) {
+            analyzeCv(profile.cv_url, user.id);
+          }
         }
-        
-        console.error("Error fetching profile:", error);
-        return;
-      }
-      
-      if (data) {
-        setProfileExists(true);
-        setFullName(data.full_name || "");
-        setBio(data.bio || "");
-        setCvUrl(data.cv_url || null);
-        
-        // If CV exists, analyze it
-        if (data.cv_url) {
-          analyzeCv(data.cv_url, user.id);
-        }
+      } catch (error) {
+        console.error("Error handling profile:", error);
       }
     }
     
@@ -215,6 +229,29 @@ const Profile = () => {
     setIsUploading(true);
     
     try {
+      // First, ensure profile exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id);
+      
+      // If profile doesn't exist, create it first
+      if (checkError || !existingProfile || existingProfile.length === 0) {
+        const { error: createError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            full_name: fullName,
+            bio: bio,
+            updated_at: new Date().toISOString()
+          });
+          
+        if (createError) {
+          console.error("Error creating profile:", createError);
+          throw new Error("Failed to create your profile");
+        }
+      }
+      
       let newCvUrl = cvUrl;
       
       // Upload CV if a new file was selected

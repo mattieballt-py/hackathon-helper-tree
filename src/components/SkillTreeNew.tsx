@@ -14,6 +14,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Check } from "lucide-react";
+import { 
+  ToggleGroup, 
+  ToggleGroupItem 
+} from "@/components/ui/toggle-group";
 
 interface Node {
   id: string;
@@ -56,7 +60,7 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
     const isCompleted = completed.includes(node.id);
     
     return (
-      <div key={node.id} className="relative">
+      <div key={node.id} className="flex-shrink-0 min-w-[200px] max-w-[300px] relative">
         <Collapsible
           open={isExpanded}
           onOpenChange={() => toggleNode(node.id)}
@@ -120,7 +124,7 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
           {hasChildren && (
             <CollapsibleContent>
               <div className="pl-6">
-                <div className="flex flex-wrap gap-4 mt-2 mb-2">
+                <div className="flex flex-row flex-wrap gap-4 mt-2 mb-2 overflow-x-auto">
                   {node.children?.map((child) => renderNode(child, level + 1))}
                 </div>
               </div>
@@ -139,7 +143,7 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-row flex-wrap gap-4 overflow-x-auto">
           {nodes.map((node) => renderNode(node))}
         </div>
       </div>

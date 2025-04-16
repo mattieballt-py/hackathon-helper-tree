@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
@@ -124,10 +125,10 @@ const Hackathons = () => {
       return;
     }
     
-    if (!hackathonTitle || !hackathonDesc || !hackathonLocation || !hackathonDate || !hackathonDuration) {
+    if (!hackathonTitle || !hackathonDesc) {
       toast({
         title: "Missing information",
-        description: "Please fill out all required fields",
+        description: "Please fill out at least the title and description fields",
         variant: "destructive"
       });
       return;
@@ -140,10 +141,10 @@ const Hackathons = () => {
         user_id: user.id,
         title: hackathonTitle,
         description: hackathonDesc,
-        date: hackathonDate,
-        location: hackathonLocation,
+        date: hackathonDate || null,
+        location: hackathonLocation || null,
         location_type: hackathonLocationType,
-        duration: hackathonDuration,
+        duration: hackathonDuration || null,
         website_url: hackathonUrl || null
       };
       
@@ -258,7 +259,7 @@ const Hackathons = () => {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">
-                    Hackathon Title
+                    Hackathon Title*
                   </label>
                   <Input 
                     value={hackathonTitle}
@@ -269,7 +270,7 @@ const Hackathons = () => {
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">
-                    Hackathon Description
+                    Hackathon Description*
                   </label>
                   <Textarea 
                     value={hackathonDesc}
@@ -282,7 +283,7 @@ const Hackathons = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">
-                      Date
+                      Date (Optional)
                     </label>
                     <Input 
                       value={hackathonDate}
@@ -292,7 +293,7 @@ const Hackathons = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">
-                      Duration
+                      Duration (Optional)
                     </label>
                     <Input 
                       value={hackathonDuration}
@@ -304,7 +305,7 @@ const Hackathons = () => {
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">
-                    Location
+                    Location (Optional)
                   </label>
                   <Input 
                     value={hackathonLocation}
@@ -335,7 +336,7 @@ const Hackathons = () => {
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">
-                    Website URL (optional)
+                    Website URL (Optional)
                   </label>
                   <Input 
                     value={hackathonUrl}
@@ -346,7 +347,7 @@ const Hackathons = () => {
 
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">
-                    Or upload event documentation
+                    Or upload event documentation (Optional)
                   </label>
                   <div className="rounded-lg border border-gray-200 p-4 text-center">
                     <Button variant="outline" size="sm">
