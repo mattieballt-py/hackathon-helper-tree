@@ -60,9 +60,32 @@ const Profile = () => {
       
       if (error) {
         if (error.code === 'PGRST116') {
-          // Profile not found - this is not an error for new users
-          console.log("Profile not found. Will create new profile on save.");
+          // Profile not found - create a new profile
+          console.log("Profile not found. Creating new profile...");
           setProfileExists(false);
+          
+          // Create a default profile for the user
+          const { error: createError } = await supabase
+            .from("profiles")
+            .insert({
+              id: user.id,
+              full_name: "",
+              bio: "",
+              updated_at: new Date().toISOString()
+            });
+            
+          if (createError) {
+            console.error("Error creating profile:", createError);
+            toast({
+              title: "Profile Creation Failed",
+              description: "Could not create your profile. Please try again.",
+              variant: "destructive"
+            });
+          } else {
+            console.log("Default profile created successfully");
+            setProfileExists(true);
+          }
+          
           return;
         }
         
@@ -203,42 +226,20 @@ const Profile = () => {
         setCvUrl(newCvUrl);
       }
       
-      // Ensure profile exists first - important for RLS
-      // Check if profile exists - if not, create it
-      if (!profileExists) {
-        console.log("Creating new profile for user:", user.id);
-        // Create the profile first
-        const { error: profileCreateError } = await supabase
-          .from("profiles")
-          .insert({
-            id: user.id,
-            full_name: fullName,
-            bio: bio,
-            cv_url: newCvUrl,
-            updated_at: new Date().toISOString(),
-          });
-          
-        if (profileCreateError) {
-          console.error("Profile create error:", profileCreateError);
-          throw new Error(profileCreateError.message || "Failed to create profile");
-        }
-        setProfileExists(true);
-      } else {
-        // Update existing profile
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({
-            full_name: fullName,
-            bio: bio,
-            cv_url: newCvUrl,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", user.id);
-          
-        if (updateError) {
-          console.error("Profile update error:", updateError);
-          throw new Error(updateError.message);
-        }
+      // Update the profile
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName,
+          bio: bio,
+          cv_url: newCvUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+        
+      if (updateError) {
+        console.error("Profile update error:", updateError);
+        throw new Error(updateError.message);
       }
       
       toast({

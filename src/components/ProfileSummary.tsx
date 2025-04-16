@@ -17,13 +17,28 @@ export function ProfileSummary() {
     // If user is signed in, fetch their profile data
     if (user) {
       const fetchProfile = async () => {
+        // First check if profile exists, if not create it
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", user.id)
           .single();
         
-        if (!error && data) {
+        if (error && error.code === 'PGRST116') {
+          // Profile not found - create a default profile
+          const { error: createError } = await supabase
+            .from("profiles")
+            .insert({
+              id: user.id,
+              full_name: "",
+              bio: "",
+              updated_at: new Date().toISOString()
+            });
+            
+          if (createError) {
+            console.error("Error creating profile:", createError);
+          }
+        } else if (data) {
           setFullName(data.full_name || "");
           
           // If user has a CV, try to get analyzed skills

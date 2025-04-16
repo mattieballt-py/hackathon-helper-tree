@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { 
   Tooltip,
   TooltipContent,
@@ -68,9 +67,9 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
         >
           <div className="flex items-center p-2">
             <CollapsibleTrigger asChild className="flex-1">
-              <div 
+              <button 
                 className={cn(
-                  "flex items-center cursor-pointer",
+                  "flex items-center text-left cursor-pointer py-1 px-2 rounded-md hover:bg-gray-100 w-full",
                   isCompleted && "line-through opacity-70"
                 )}
               >
@@ -104,26 +103,24 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
                     )}
                   </span>
                 )}
-              </div>
+
+                <div 
+                  onClick={(e) => toggleComplete(node.id, e)} 
+                  className={cn(
+                    "ml-auto h-5 w-5 rounded-full border-2 flex items-center justify-center",
+                    isCompleted ? "bg-gradient-primary border-transparent" : "bg-white"
+                  )}
+                >
+                  {isCompleted ? <Check size={10} /> : null}
+                </div>
+              </button>
             </CollapsibleTrigger>
-            
-            <Button
-              variant="outline"
-              size="icon"
-              className={cn(
-                "h-5 w-5 rounded-full ml-2 border-2",
-                isCompleted ? "bg-gradient-primary border-transparent" : "bg-white"
-              )}
-              onClick={(e) => toggleComplete(node.id, e)}
-            >
-              {isCompleted ? <Check size={10} /> : null}
-            </Button>
           </div>
           
           {hasChildren && (
             <CollapsibleContent>
               <div className="pl-6">
-                <div className="flex flex-row flex-wrap gap-4 mt-2 mb-2">
+                <div className="flex flex-wrap gap-4 mt-2 mb-2">
                   {node.children?.map((child) => renderNode(child, level + 1))}
                 </div>
               </div>
@@ -142,7 +139,7 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="flex flex-row flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4">
           {nodes.map((node) => renderNode(node))}
         </div>
       </div>
