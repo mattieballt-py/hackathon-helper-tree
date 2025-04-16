@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   Tooltip,
@@ -14,7 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Check, Circle } from "lucide-react";
+import { Check } from "lucide-react";
 
 interface Node {
   id: string;
@@ -68,17 +68,16 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
         >
           <div className="flex items-center p-2">
             <CollapsibleTrigger asChild className="flex-1">
-              <Button
-                variant="ghost"
+              <div 
                 className={cn(
-                  "justify-between w-full text-left font-normal",
+                  "flex items-center cursor-pointer",
                   isCompleted && "line-through opacity-70"
                 )}
               >
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span>{node.title}</span>
+                      <span className="text-sm">{node.title}</span>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{node.description}</p>
@@ -97,15 +96,15 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
                 </TooltipProvider>
 
                 {hasChildren && (
-                  <ChevronDown 
-                    size={16} 
-                    className={cn(
-                      "transition-transform ml-2", 
-                      isExpanded ? "rotate-180" : ""
-                    )} 
-                  />
+                  <span className="ml-2">
+                    {isExpanded ? (
+                      <ChevronDown size={16} className="text-gray-500" />
+                    ) : (
+                      <ChevronRight size={16} className="text-gray-500" />
+                    )}
+                  </span>
                 )}
-              </Button>
+              </div>
             </CollapsibleTrigger>
             
             <Button
@@ -117,14 +116,14 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
               )}
               onClick={(e) => toggleComplete(node.id, e)}
             >
-              {isCompleted ? <Check size={10} /> : <Circle size={10} />}
+              {isCompleted ? <Check size={10} /> : null}
             </Button>
           </div>
           
           {hasChildren && (
             <CollapsibleContent>
-              <div className="pl-6 space-y-1">
-                <div className="flex flex-row flex-wrap gap-3 mt-2 mb-2">
+              <div className="pl-6">
+                <div className="flex flex-row flex-wrap gap-4 mt-2 mb-2">
                   {node.children?.map((child) => renderNode(child, level + 1))}
                 </div>
               </div>

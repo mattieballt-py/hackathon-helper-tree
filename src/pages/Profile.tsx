@@ -203,28 +203,42 @@ const Profile = () => {
         setCvUrl(newCvUrl);
       }
       
-      // Update profile in Supabase
-      const profileData: ProfileData = {
-        full_name: fullName,
-        bio: bio,
-      };
-      
-      if (newCvUrl) {
-        profileData.cv_url = newCvUrl;
-      }
-      
-      // Use upsert with explicit ID to ensure row-level security works correctly
-      const { error } = await supabase
-        .from("profiles")
-        .upsert({
-          id: user.id,
-          ...profileData,
-          updated_at: new Date().toISOString(),
-        });
-      
-      if (error) {
-        console.error("Profile update error:", error);
-        throw new Error(error.message);
+      // Ensure profile exists first - important for RLS
+      // Check if profile exists - if not, create it
+      if (!profileExists) {
+        console.log("Creating new profile for user:", user.id);
+        // Create the profile first
+        const { error: profileCreateError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            full_name: fullName,
+            bio: bio,
+            cv_url: newCvUrl,
+            updated_at: new Date().toISOString(),
+          });
+          
+        if (profileCreateError) {
+          console.error("Profile create error:", profileCreateError);
+          throw new Error(profileCreateError.message || "Failed to create profile");
+        }
+        setProfileExists(true);
+      } else {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            full_name: fullName,
+            bio: bio,
+            cv_url: newCvUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id);
+          
+        if (updateError) {
+          console.error("Profile update error:", updateError);
+          throw new Error(updateError.message);
+        }
       }
       
       toast({

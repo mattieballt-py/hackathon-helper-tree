@@ -20,3 +20,4 @@ enabled = true
 
 [functions.analyze-cv]
 verify_jwt = true
+

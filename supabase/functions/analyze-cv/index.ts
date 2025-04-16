@@ -58,6 +58,14 @@ serve(async (req) => {
       cvText = "Unable to process CV content. Using URL reference instead.";
     }
 
+    if (!geminiApiKey) {
+      console.error("No Gemini API key found");
+      return new Response(
+        JSON.stringify({ error: "API key not configured" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const prompt = `
       You are an AI assistant helping with career guidance for hackathons.
       Please analyze this CV/resume and identify the following:
@@ -78,6 +86,7 @@ serve(async (req) => {
       }
     `;
 
+    console.log("Sending request to Gemini API");
     const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent", {
       method: "POST",
       headers: {
@@ -100,11 +109,14 @@ serve(async (req) => {
     });
 
     const result = await response.json();
+    console.log("Received response from Gemini API");
     
     let analysisResult;
     try {
       if (result.candidates && result.candidates[0].content.parts[0].text) {
         const textResponse = result.candidates[0].content.parts[0].text;
+        console.log("Raw response:", textResponse);
+        
         // Extract JSON from the response (handling potential formatting)
         const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -113,6 +125,7 @@ serve(async (req) => {
           // Fallback to parsing the whole response as JSON
           analysisResult = JSON.parse(textResponse);
         }
+        console.log("Parsed analysis result:", analysisResult);
       } else {
         throw new Error("Unexpected response format");
       }
