@@ -18,6 +18,13 @@ interface ProfileData {
   avatar_url?: string;
 }
 
+interface SkillAnalysis {
+  skills: string[];
+  experienceLevel: string;
+  suggestedRoles: string[];
+  improvementAreas: string[];
+}
+
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -26,10 +33,12 @@ const Profile = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
-  const [skills, setSkills] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<SkillAnalysis | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -57,14 +66,68 @@ const Profile = () => {
         setFullName(data.full_name || "");
         setBio(data.bio || "");
         setCvUrl(data.cv_url || null);
+        
+        // If CV exists, analyze it
+        if (data.cv_url) {
+          analyzeCv(data.cv_url, user.id);
+        }
       }
     }
     
     fetchProfile();
   }, [user, navigate]);
 
+  const analyzeCv = async (url: string, userId: string) => {
+    if (!url) return;
+    
+    setIsAnalyzing(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-cv', {
+        body: { cvUrl: url, userId }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (data.analysis) {
+        setAnalysis(data.analysis);
+        setSkills(data.analysis.skills || []);
+      }
+    } catch (error: any) {
+      console.error("Error analyzing CV:", error);
+      toast({
+        title: "CV Analysis Failed",
+        description: error.message || "There was an error analyzing your CV.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const uploadCV = async (file: File): Promise<string | null> => {
     if (!user) return null;
+    
+    // Create user_files bucket if it doesn't exist
+    try {
+      const { data: bucketExists } = await supabase.storage.getBucket('user_files');
+      if (!bucketExists) {
+        await supabase.storage.createBucket('user_files', {
+          public: false
+        });
+      }
+    } catch (error) {
+      // Bucket might not exist, create it
+      try {
+        await supabase.storage.createBucket('user_files', {
+          public: false
+        });
+      } catch (bucketError) {
+        console.error("Error creating bucket:", bucketError);
+      }
+    }
     
     const fileExt = file.name.split(".").pop();
     const fileName = `${user.id}-cv.${fileExt}`;
@@ -108,6 +171,11 @@ const Profile = () => {
       // Upload CV if a new file was selected
       if (cvFile) {
         newCvUrl = await uploadCV(cvFile);
+        if (newCvUrl) {
+          setCvUrl(newCvUrl);
+          // Analyze the CV
+          analyzeCv(newCvUrl, user.id);
+        }
       }
       
       // Update profile in Supabase
@@ -210,14 +278,22 @@ const Profile = () => {
                     <label className="text-sm font-medium text-gray-700 block mb-1">
                       Skills & Expertise
                     </label>
-                    <Input 
-                      placeholder="e.g., JavaScript, UI Design, Data Analysis" 
-                      value={skills}
-                      onChange={(e) => setSkills(e.target.value)}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Comma separated list or upload your CV below
-                    </p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {skills && skills.length > 0 ? (
+                        skills.map((skill, index) => (
+                          <span 
+                            key={index}
+                            className="px-2 py-1 rounded-full bg-blue-100 text-xs text-blue-700"
+                          >
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-500">
+                          Upload your CV to automatically identify your skills
+                        </p>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="pt-4">
@@ -236,7 +312,7 @@ const Profile = () => {
                         <input
                           id="cv-upload"
                           type="file"
-                          accept=".pdf,.doc,.docx"
+                          accept=".pdf,.doc,.docx,.txt"
                           className="hidden"
                           onChange={handleFileChange}
                         />
@@ -244,7 +320,7 @@ const Profile = () => {
                           {cvUrl ? "Replace CV" : "Select File"}
                         </Button>
                       </div>
-                      <p className="mt-2 text-xs text-gray-500">PDF, DOC, or DOCX up to 10MB</p>
+                      <p className="mt-2 text-xs text-gray-500">PDF, DOC, DOCX, or TXT up to 10MB</p>
                       
                       {cvUrl && (
                         <div className="mt-4 p-2 bg-gray-50 rounded flex justify-between items-center">
@@ -256,15 +332,48 @@ const Profile = () => {
                       )}
                     </div>
                   </div>
+                  
+                  {analysis && (
+                    <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <h3 className="font-medium text-blue-900">AI Analysis Results</h3>
+                      
+                      <div className="mt-2 space-y-3">
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-800">Experience Level</h4>
+                          <p className="text-sm text-blue-700 capitalize">{analysis.experienceLevel}</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-800">Suggested Roles</h4>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {analysis.suggestedRoles.map((role, i) => (
+                              <span key={i} className="px-2 py-1 rounded-full bg-blue-100 text-xs text-blue-700">
+                                {role}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-800">Areas for Improvement</h4>
+                          <ul className="list-disc list-inside text-sm text-blue-700">
+                            {analysis.improvementAreas.map((area, i) => (
+                              <li key={i}>{area}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex justify-end">
                   <Button 
                     type="submit" 
                     className="bg-gradient-primary"
-                    disabled={isUploading}
+                    disabled={isUploading || isAnalyzing}
                   >
-                    {isUploading ? "Saving..." : "Save Profile"}
+                    {isUploading ? "Saving..." : isAnalyzing ? "Analyzing CV..." : "Save Profile"}
                   </Button>
                 </div>
               </form>
