@@ -13,11 +13,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Check } from "lucide-react";
-import { 
-  ToggleGroup, 
-  ToggleGroupItem 
-} from "@/components/ui/toggle-group";
 
 interface Node {
   id: string;
@@ -35,7 +30,6 @@ interface SkillTreeProps {
 
 export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
   const [expanded, setExpanded] = useState<string[]>([]);
-  const [completed, setCompleted] = useState<string[]>([]);
   
   const toggleNode = (id: string) => {
     setExpanded(prev => 
@@ -45,42 +39,24 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
     );
   };
 
-  const toggleComplete = (id: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent triggering parent click handlers
-    setCompleted(prev => 
-      prev.includes(id) 
-        ? prev.filter(nodeId => nodeId !== id)
-        : [...prev, id]
-    );
-  };
-
   const renderNode = (node: Node, level: number = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expanded.includes(node.id);
-    const isCompleted = completed.includes(node.id);
     
     return (
-      <div key={node.id} className="flex-shrink-0 min-w-[200px] max-w-[300px] relative">
+      <div key={node.id} className="flex-shrink-0">
         <Collapsible
           open={isExpanded}
           onOpenChange={() => toggleNode(node.id)}
-          className={cn(
-            "rounded-lg hover:bg-gray-50 transition-colors",
-            isCompleted && "bg-gray-50"
-          )}
+          className="rounded-lg hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center p-2">
-            <CollapsibleTrigger asChild className="flex-1">
-              <button 
-                className={cn(
-                  "flex items-center text-left cursor-pointer py-1 px-2 rounded-md hover:bg-gray-100 w-full",
-                  isCompleted && "line-through opacity-70"
-                )}
-              >
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center text-left cursor-pointer py-1 px-2 rounded-md hover:bg-gray-100 w-full">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-sm">{node.title}</span>
+                      <span className="text-sm font-medium">{node.title}</span>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{node.description}</p>
@@ -107,16 +83,6 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
                     )}
                   </span>
                 )}
-
-                <div 
-                  onClick={(e) => toggleComplete(node.id, e)} 
-                  className={cn(
-                    "ml-auto h-5 w-5 rounded-full border-2 flex items-center justify-center",
-                    isCompleted ? "bg-gradient-primary border-transparent" : "bg-white"
-                  )}
-                >
-                  {isCompleted ? <Check size={10} /> : null}
-                </div>
               </button>
             </CollapsibleTrigger>
           </div>
@@ -124,7 +90,7 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
           {hasChildren && (
             <CollapsibleContent>
               <div className="pl-6">
-                <div className="flex flex-row flex-wrap gap-4 mt-2 mb-2 overflow-x-auto">
+                <div className="flex flex-row flex-wrap gap-4 mt-2">
                   {node.children?.map((child) => renderNode(child, level + 1))}
                 </div>
               </div>
@@ -143,7 +109,7 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="flex flex-row flex-wrap gap-4 overflow-x-auto">
+        <div className="flex flex-row flex-wrap gap-4">
           {nodes.map((node) => renderNode(node))}
         </div>
       </div>
