@@ -44,15 +44,26 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
     const isExpanded = expanded.includes(node.id);
     
     return (
-      <div key={node.id} className="flex-shrink-0">
+      <div key={node.id} 
+        className={cn(
+          "relative",
+          level > 0 && "mt-2"
+        )}
+      >
         <Collapsible
           open={isExpanded}
           onOpenChange={() => toggleNode(node.id)}
-          className="rounded-lg hover:bg-gray-50 transition-colors"
         >
-          <div className="flex items-center p-2">
+          <div className="flex items-center">
             <CollapsibleTrigger asChild>
-              <button className="flex items-center text-left cursor-pointer py-1 px-2 rounded-md hover:bg-gray-100 w-full">
+              <button 
+                className={cn(
+                  "flex items-center text-left py-2 px-4 rounded-lg transition-all",
+                  "bg-gray-100 hover:bg-gray-200",
+                  "border border-gray-200",
+                  "min-w-[200px]"
+                )}
+              >
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -75,7 +86,7 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
                 </TooltipProvider>
 
                 {hasChildren && (
-                  <span className="ml-2">
+                  <span className="ml-auto">
                     {isExpanded ? (
                       <ChevronDown size={16} className="text-gray-500" />
                     ) : (
@@ -89,9 +100,17 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
           
           {hasChildren && (
             <CollapsibleContent>
-              <div className="pl-6">
-                <div className="flex flex-row flex-wrap gap-4 mt-2">
-                  {node.children?.map((child) => renderNode(child, level + 1))}
+              <div className="relative pl-8 mt-2">
+                {/* Render connector lines */}
+                <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-200" />
+                <div className="space-y-4">
+                  {node.children?.map((child) => (
+                    <div key={child.id} className="relative">
+                      {/* Horizontal connector line */}
+                      <div className="absolute left-[-16px] top-1/2 w-4 h-px bg-gray-200" />
+                      {renderNode(child, level + 1)}
+                    </div>
+                  ))}
                 </div>
               </div>
             </CollapsibleContent>
@@ -102,16 +121,14 @@ export function SkillTreeNew({ nodes, title, subtitle }: SkillTreeProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-      <div className="mb-4 pb-2 border-b">
+    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+      <div className="mb-6">
         <h2 className="text-xl font-semibold gradient-text">{title}</h2>
         <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex flex-row flex-wrap gap-4">
-          {nodes.map((node) => renderNode(node))}
-        </div>
+      <div className="space-y-6 overflow-x-auto">
+        {nodes.map((node) => renderNode(node))}
       </div>
     </div>
   );

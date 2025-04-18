@@ -1,7 +1,5 @@
-
 import { Sidebar } from "@/components/Sidebar";
 import { ChatBuddy } from "@/components/ChatBuddy";
-import { ProfileSummary } from "@/components/ProfileSummary";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -232,30 +230,18 @@ const Index = () => {
           </header>
 
           {user ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <div className="space-y-6">
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <SkillTreeNew 
-                      title="What can my role be?" 
-                      subtitle="Select the skills you're most comfortable with to get guidance on your role"
-                      nodes={roleNodes}
-                    />
-                  </div>
-                  
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <SkillTreeNew 
-                      title="What to do right now?" 
-                      subtitle="Select what you've done already"
-                      nodes={taskNodes}
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="space-y-6">
+              <SkillTreeNew 
+                title="What can my role be?" 
+                subtitle="Select the skills you're most comfortable with to get guidance on your role"
+                nodes={roleNodes}
+              />
               
-              <div className="space-y-6">
-                <ProfileSummary />
-              </div>
+              <SkillTreeNew 
+                title="What to do right now?" 
+                subtitle="Select what you've done already"
+                nodes={taskNodes}
+              />
             </div>
           ) : (
             <div className="text-center py-20 bg-white rounded-lg shadow-sm">
