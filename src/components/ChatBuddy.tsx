@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, X, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 export function ChatBuddy() {
   const [open, setOpen] = useState(false);
@@ -11,25 +12,38 @@ export function ChatBuddy() {
     { role: "system", content: "👋 Hi there! I'm your Hackathon Buddy. How can I help you today?" },
   ]);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage = input;
+    setInput("");
     
     // Add user message
-    setMessages([...messages, { role: "user", content: input }]);
+    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     
-    // Simulate AI response (in a real app, this would be an API call)
-    setTimeout(() => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-with-gemini', {
+        body: { message: userMessage }
+      });
+
+      if (error) throw error;
+
       setMessages(prev => [
         ...prev,
-        { 
-          role: "system", 
-          content: "I'm here to help with your hackathon journey! What specific challenge are you facing right now?"
-        }
+        { role: "system", content: data.response }
       ]);
-    }, 1000);
-    
-    setInput("");
+    } catch (error) {
+      console.error('Error calling AI:', error);
+      setMessages(prev => [
+        ...prev,
+        { role: "system", content: "Sorry, I encountered an error. Please try again." }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -64,7 +78,7 @@ export function ChatBuddy() {
             <div
               key={i}
               className={cn(
-                "chat-bubble mb-3",
+                "chat-bubble max-w-[80%] rounded-lg px-4 py-2 mb-3",
                 message.role === "user"
                   ? "bg-gradient-primary text-primary-foreground ml-auto"
                   : "bg-gray-100 text-gray-800"
@@ -91,8 +105,8 @@ export function ChatBuddy() {
             />
             <Button 
               className="h-[60px] w-[60px] bg-gradient-primary rounded-md" 
-              onClick={handleSend}
-              disabled={!input.trim()}
+              onClick={() => handleSend()}
+              disabled={!input.trim() || isLoading}
             >
               <Send size={20} className="text-white" />
             </Button>
