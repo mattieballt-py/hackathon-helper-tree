@@ -19,27 +19,75 @@ const Index = () => {
           id: "frontend-ui",
           title: "UI Development",
           description: "Building user interfaces with HTML, CSS, and JavaScript",
-          resources: ["HTML/CSS Foundations", "Responsive Design", "UI Component Libraries"],
           children: [
             {
-              id: "frontend-frameworks",
-              title: "Frameworks",
-              description: "Popular frontend frameworks and libraries",
-              resources: ["React", "Vue", "Angular", "Svelte"],
+              id: "html",
+              title: "HTML",
+              description: "Structure and semantics",
+              children: [
+                {
+                  id: "html-basics",
+                  title: "HTML Basics",
+                  description: "Core HTML concepts",
+                  children: Array.from({ length: 10 }, (_, i) => ({
+                    id: `html-concept-${i + 1}`,
+                    title: `HTML Concept ${i + 1}`,
+                    description: `Deep dive into HTML concept ${i + 1}`,
+                    children: Array.from({ length: 5 }, (_, j) => ({
+                      id: `html-subtopic-${i}-${j}`,
+                      title: `HTML Subtopic ${j + 1}`,
+                      description: `Detailed exploration of HTML subtopic ${j + 1}`,
+                    }))
+                  }))
+                }
+              ]
             },
             {
-              id: "frontend-css",
-              title: "CSS & Design",
-              description: "Advanced styling and design systems",
-              resources: ["CSS-in-JS", "Tailwind CSS", "Design Systems"],
+              id: "css",
+              title: "CSS",
+              description: "Styling and layout",
+              children: Array.from({ length: 10 }, (_, i) => ({
+                id: `css-concept-${i}`,
+                title: `CSS Concept ${i + 1}`,
+                description: `Advanced CSS topic ${i + 1}`,
+                children: Array.from({ length: 5 }, (_, j) => ({
+                  id: `css-deep-${i}-${j}`,
+                  title: `CSS Deep Dive ${j + 1}`,
+                  description: `Mastering CSS concept ${j + 1}`,
+                  children: Array.from({ length: 3 }, (_, k) => ({
+                    id: `css-master-${i}-${j}-${k}`,
+                    title: `CSS Mastery ${k + 1}`,
+                    description: `Expert-level CSS techniques ${k + 1}`,
+                  }))
+                }))
+              }))
             }
           ]
         },
         {
-          id: "frontend-ux",
-          title: "UX & Interaction",
-          description: "Creating engaging and intuitive user experiences",
-          resources: ["UX Principles", "Accessibility", "Animation & Transitions"],
+          id: "frontend-frameworks",
+          title: "Frontend Frameworks",
+          description: "Modern JavaScript frameworks",
+          children: Array.from({ length: 5 }, (_, i) => ({
+            id: `framework-${i}`,
+            title: `Framework ${i + 1}`,
+            description: `Learning path for framework ${i + 1}`,
+            children: Array.from({ length: 8 }, (_, j) => ({
+              id: `framework-concept-${i}-${j}`,
+              title: `Framework Concept ${j + 1}`,
+              description: `Core concept ${j + 1}`,
+              children: Array.from({ length: 6 }, (_, k) => ({
+                id: `framework-deep-${i}-${j}-${k}`,
+                title: `Advanced Topic ${k + 1}`,
+                description: `Advanced framework topic ${k + 1}`,
+                children: Array.from({ length: 4 }, (_, l) => ({
+                  id: `framework-master-${i}-${j}-${k}-${l}`,
+                  title: `Expert Level ${l + 1}`,
+                  description: `Expert-level framework knowledge ${l + 1}`
+                }))
+              }))
+            }))
+          }))
         }
       ]
     },
@@ -47,75 +95,29 @@ const Index = () => {
       id: "backend",
       title: "Backend Development",
       description: "Build server-side applications and APIs",
-      children: [
-        {
-          id: "backend-api",
-          title: "API Development",
-          description: "Creating RESTful and GraphQL APIs",
-          resources: ["REST API Design", "GraphQL Basics", "API Authentication"],
-        },
-        {
-          id: "backend-db",
-          title: "Databases",
-          description: "Storing and querying data effectively",
-          resources: ["SQL Fundamentals", "NoSQL Options", "Database Design"],
-          children: [
-            {
-              id: "backend-sql",
-              title: "SQL Databases",
-              description: "Using relational databases",
-              resources: ["PostgreSQL", "MySQL", "Database Optimization"],
-            },
-            {
-              id: "backend-nosql",
-              title: "NoSQL Databases",
-              description: "Using document and graph databases",
-              resources: ["MongoDB", "Firebase", "Redis"],
-            }
-          ]
-        }
-      ]
-    },
-    {
-      id: "design",
-      title: "Design & UX",
-      description: "Create beautiful and usable interfaces",
-      children: [
-        {
-          id: "design-ui",
-          title: "UI Design",
-          description: "Creating visually appealing interfaces",
-          resources: ["Color Theory", "Typography", "Visual Hierarchy"],
-        },
-        {
-          id: "design-ux",
-          title: "UX Design",
-          description: "Designing user-friendly experiences",
-          resources: ["User Research", "Wireframing", "Usability Testing"],
-        }
-      ]
-    },
-    {
-      id: "product",
-      title: "Project Management",
-      description: "Lead the project and team",
-      children: [
-        {
-          id: "product-planning",
-          title: "Project Planning",
-          description: "Setting goals and planning project scope",
-          resources: ["Agile Methodology", "Sprint Planning", "User Stories"],
-        },
-        {
-          id: "product-presentation",
-          title: "Presentation",
-          description: "Pitching your project effectively",
-          resources: ["Pitch Deck Templates", "Demo Preparation", "Storytelling"],
-        }
-      ]
+      children: Array.from({ length: 8 }, (_, i) => ({
+        id: `backend-path-${i}`,
+        title: `Backend Path ${i + 1}`,
+        description: `Backend development path ${i + 1}`,
+        children: Array.from({ length: 6 }, (_, j) => ({
+          id: `backend-concept-${i}-${j}`,
+          title: `Backend Concept ${j + 1}`,
+          description: `Core backend concept ${j + 1}`,
+          children: Array.from({ length: 5 }, (_, k) => ({
+            id: `backend-deep-${i}-${j}-${k}`,
+            title: `Advanced Backend ${k + 1}`,
+            description: `Advanced backend topic ${k + 1}`,
+            children: Array.from({ length: 4 }, (_, l) => ({
+              id: `backend-master-${i}-${j}-${k}-${l}`,
+              title: `Backend Mastery ${l + 1}`,
+              description: `Expert-level backend skill ${l + 1}`
+            }))
+          }))
+        }))
+      }))
     }
   ];
-  
+
   const taskNodes = [
     {
       id: "planning",
