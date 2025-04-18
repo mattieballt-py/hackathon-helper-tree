@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -82,30 +81,48 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(email, password);
-    setLoading(false);
     
-    if (error) {
-      // Special handling for email not confirmed error
-      if (error.message.includes("Email not confirmed")) {
-        toast({
-          title: "Email not confirmed",
-          description: "Please check your email for a confirmation link.",
-          variant: "destructive",
-        });
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        console.error("Sign in error:", error);
+        // Special handling for email not confirmed error
+        if (error.message?.includes("Email not confirmed")) {
+          toast({
+            title: "Email not confirmed",
+            description: "Please check your email for a confirmation link.",
+            variant: "destructive",
+          });
+        } else if (error.message?.includes("Invalid login credentials")) {
+          toast({
+            title: "Invalid credentials",
+            description: "Please check your email and password and try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error signing in",
+            description: error.message || "An unexpected error occurred",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
-          title: "Error signing in",
-          description: error.message,
-          variant: "destructive",
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
         });
+        navigate("/");
       }
-    } else {
+    } catch (error: any) {
       toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
-      navigate("/");
+      console.error("Sign in exception:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,21 +138,40 @@ const Auth = () => {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password);
-    setLoading(false);
-    
-    if (error) {
+    try {
+      const { error } = await signUp(email, password);
+      
+      if (error) {
+        // Handle specific error cases
+        if (error.message?.includes("User already registered")) {
+          toast({
+            title: "Account already exists",
+            description: "An account with this email already exists. Try signing in instead.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error signing up",
+            description: error.message || "An unexpected error occurred",
+            variant: "destructive",
+          });
+        }
+      } else {
+        setSignUpSuccess(true);
+        toast({
+          title: "Account created!",
+          description: "Please check your email for a confirmation link to complete your registration.",
+        });
+      }
+    } catch (error: any) {
       toast({
-        title: "Error signing up",
-        description: error.message,
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-    } else {
-      setSignUpSuccess(true);
-      toast({
-        title: "Account created!",
-        description: "Please check your email for a confirmation link to complete your registration.",
-      });
+      console.error("Sign up exception:", error);
+    } finally {
+      setLoading(false);
     }
   };
 

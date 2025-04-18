@@ -22,9 +22,9 @@ export function ProfileSummary() {
           .from("profiles")
           .select("*")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
         
-        if (error && error.code === 'PGRST116') {
+        if (!data) {
           // Profile not found - create a default profile
           const { error: createError } = await supabase
             .from("profiles")

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
@@ -57,10 +56,11 @@ const Profile = () => {
         const { data: existingProfile, error: checkError } = await supabase
           .from("profiles")
           .select("*")
-          .eq("id", user.id);
+          .eq("id", user.id)
+          .maybeSingle();
         
         // If no profile exists or there's an error, create a new profile
-        if (checkError || !existingProfile || existingProfile.length === 0) {
+        if (!existingProfile) {
           console.log("Profile not found. Creating new profile...");
           
           // Create a default profile for the user
@@ -84,35 +84,21 @@ const Profile = () => {
           } else {
             console.log("Default profile created successfully");
             setProfileExists(true);
-            // Now fetch the newly created profile
-            const { data: newProfile, error: newProfileError } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", user.id)
-              .single();
-              
-            if (newProfileError || !newProfile) {
-              console.error("Error fetching new profile:", newProfileError);
-              return;
-            }
-            
-            if (newProfile) {
-              setFullName(newProfile.full_name || "");
-              setBio(newProfile.bio || "");
-              setCvUrl(newProfile.cv_url || null);
-            }
+            // Set empty default values
+            setFullName("");
+            setBio("");
+            setCvUrl(null);
           }
         } else {
           // Profile exists, set the data
           setProfileExists(true);
-          const profile = existingProfile[0];
-          setFullName(profile.full_name || "");
-          setBio(profile.bio || "");
-          setCvUrl(profile.cv_url || null);
+          setFullName(existingProfile.full_name || "");
+          setBio(existingProfile.bio || "");
+          setCvUrl(existingProfile.cv_url || null);
           
           // If CV exists, analyze it
-          if (profile.cv_url) {
-            analyzeCv(profile.cv_url, user.id);
+          if (existingProfile.cv_url) {
+            analyzeCv(existingProfile.cv_url, user.id);
           }
         }
       } catch (error) {
@@ -229,29 +215,6 @@ const Profile = () => {
     setIsUploading(true);
     
     try {
-      // First, ensure profile exists
-      const { data: existingProfile, error: checkError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id);
-      
-      // If profile doesn't exist, create it first
-      if (checkError || !existingProfile || existingProfile.length === 0) {
-        const { error: createError } = await supabase
-          .from("profiles")
-          .insert({
-            id: user.id,
-            full_name: fullName,
-            bio: bio,
-            updated_at: new Date().toISOString()
-          });
-          
-        if (createError) {
-          console.error("Error creating profile:", createError);
-          throw new Error("Failed to create your profile");
-        }
-      }
-      
       let newCvUrl = cvUrl;
       
       // Upload CV if a new file was selected
@@ -263,20 +226,45 @@ const Profile = () => {
         setCvUrl(newCvUrl);
       }
       
-      // Update the profile
-      const { error: updateError } = await supabase
+      // Check if profile exists first
+      const { data: existingProfile, error: checkError } = await supabase
         .from("profiles")
-        .update({
-          full_name: fullName,
-          bio: bio,
-          cv_url: newCvUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (!existingProfile) {
+        // If profile doesn't exist, create it
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            full_name: fullName,
+            bio: bio,
+            cv_url: newCvUrl,
+            updated_at: new Date().toISOString()
+          });
         
-      if (updateError) {
-        console.error("Profile update error:", updateError);
-        throw new Error(updateError.message);
+        if (insertError) {
+          console.error("Error creating profile:", insertError);
+          throw new Error("Failed to create your profile");
+        }
+      } else {
+        // Update the existing profile
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            full_name: fullName,
+            bio: bio,
+            cv_url: newCvUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id);
+          
+        if (updateError) {
+          console.error("Profile update error:", updateError);
+          throw new Error(updateError.message);
+        }
       }
       
       toast({

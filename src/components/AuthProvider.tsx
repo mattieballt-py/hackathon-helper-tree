@@ -32,10 +32,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        console.log('Auth state changed:', _event, session ? 'session exists' : 'no session');
+      (event, session) => {
+        console.log('Auth state changed:', event, session ? 'session exists' : 'no session');
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // If the user just signed in and we have a session, ensure their profile exists
+        if (event === 'SIGNED_IN' && session?.user) {
+          ensureProfileExists(session.user.id);
+        }
       }
     );
 
@@ -44,18 +49,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Got session:', session ? 'session exists' : 'no session');
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // If we have a session, ensure the user's profile exists
+      if (session?.user) {
+        ensureProfileExists(session.user.id);
+      }
+      
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // Helper function to ensure a profile exists for the user
+  const ensureProfileExists = async (userId: string) => {
+    try {
+      // First check if profile exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
+      
+      // If no profile exists, create one
+      if (!existingProfile && !checkError) {
+        const { error: createError } = await supabase
+          .from("profiles")
+          .insert({
+            id: userId,
+            full_name: "",
+            bio: "",
+            updated_at: new Date().toISOString()
+          });
+          
+        if (createError) {
+          console.error("Error creating profile:", createError);
+        } else {
+          console.log("Created default profile for user:", userId);
+        }
+      }
+    } catch (error) {
+      console.error("Error in ensureProfileExists:", error);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      // If successful and we have a user, ensure their profile exists
+      if (data?.user && !error) {
+        await ensureProfileExists(data.user.id);
+      }
+      
       return { error };
     } catch (error) {
       console.error('Error signing in:', error);
@@ -65,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -73,6 +122,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           emailRedirectTo: window.location.origin + '/auth',
         },
       });
+      
+      // If signup is successful without email confirmation required
+      // (which would be unusual, but possible if email confirmation is disabled)
+      if (data?.user && !error && data?.session) {
+        await ensureProfileExists(data.user.id);
+      }
+      
       return { error };
     } catch (error) {
       console.error('Error signing up:', error);

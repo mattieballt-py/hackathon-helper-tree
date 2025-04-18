@@ -1,54 +1,54 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
+// This file will be executed as a Supabase Edge Function
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-Deno.serve(async (req) => {
+// Define CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Handle the incoming request
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  
   try {
-    // Get the request body
-    const { cvUrl, userId } = await req.json()
+    // Parse the request body
+    const { cvUrl, userId } = await req.json();
     
     if (!cvUrl) {
       return new Response(
         JSON.stringify({ error: 'CV URL is required' }),
-        { headers: { 'Content-Type': 'application/json' }, status: 400 }
-      )
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    // Mock analysis since this is just a demo
-    // In a real application, you would send the CV to an AI service for analysis
-    const mockAnalysis = {
-      skills: ['JavaScript', 'React', 'Node.js', 'TypeScript', 'HTML/CSS'],
-      experienceLevel: 'Intermediate',
-      suggestedRoles: ['Frontend Developer', 'Full Stack Engineer', 'UI Developer'],
-      improvementAreas: [
-        'Consider learning more backend technologies',
-        'Add cloud deployment experience',
-        'Develop skills in automated testing'
-      ]
-    }
-
-    // Return the analysis
+    // In a real implementation, you would do actual CV analysis here
+    // For demo purposes, we'll return mock analysis data
+    const analysis = {
+      skills: ["React", "TypeScript", "Python", "Data Analysis", "UI Design"],
+      experienceLevel: "Intermediate",
+      suggestedRoles: ["Frontend Developer", "Full Stack Engineer", "UI Designer"],
+      improvementAreas: ["Add more backend experience", "Contribute to open-source projects"]
+    };
+    
+    console.log(`Analyzed CV for user ${userId} with URL ${cvUrl}`);
+    
+    // Return the analysis results
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        analysis: mockAnalysis
-      }),
-      { 
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      }
-    )
+      JSON.stringify({ analysis }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+    
   } catch (error) {
-    console.error('Error analyzing CV:', error)
+    console.error("Error in analyze-cv function:", error);
     
     return new Response(
-      JSON.stringify({ 
-        error: 'Failed to analyze CV',
-        details: error.message
-      }),
-      { 
-        headers: { 'Content-Type': 'application/json' },
-        status: 500
-      }
-    )
+      JSON.stringify({ error: error.message || "An error occurred during CV analysis" }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
   }
-})
+});
